@@ -120,16 +120,35 @@ if not EXTRACT_COMMANDS:
 
 class Core(CorePluginBase):
     def enable(self):
-        self.config = deluge.configmanager.ConfigManager("simpleextractor.conf", DEFAULT_PREFS)
+        self.config = deluge.configmanager.ConfigManager("simpleextractorchmod.conf", DEFAULT_PREFS)
         if not self.config["extract_path"]:
             self.config["extract_path"] = deluge.configmanager.ConfigManager("core.conf")["download_location"]
         component.get("EventManager").register_event_handler("TorrentFinishedEvent", self._on_torrent_finished)
+        component.get("EventManager").register_event_handler("TorrentStateChangedEvent", self._on_torrent_state_changed)
+
     def disable(self):
         component.get("EventManager").deregister_event_handler("TorrentFinishedEvent", self._on_torrent_finished)
+        component.get("EventManager").deregister_event_handler("TorrentStateChangedEvent", self._on_torrent_state_changed)
 
     def update(self):
         pass
+    
+    def _on_torrent_state_changed(self, torrent_id, torrent_state):
+        """
+        This is called when a torrent state changes. 
+        """
+        log.info("EXTRACTOR: State Changed::torrent_id: %s", torrent_id)
+        log.info("EXTRACTOR: State Changed::torrent_state: %s", torrent_state)
+        # if torrent_state) not in ["Seeding", "Queued"]:
+        #     # tid = component.get("TorrentManager").torrents[torrent_id]
+        #     # tid_status = tid.get_status(["save_path", "name"])
 
+        #     # files = tid.get_files()
+        #     log.info("EXTRACTOR: State Changed::torrent_id: %s", torrent_id)
+        #     log.info("EXTRACTOR: State Changed::torrent_state: %s", torrent_state)
+        #     # log.info("EXTRACTOR: State Changed::tid_status: %s", tid_status)
+        #     # log.info("EXTRACTOR: State Changed::files: %s", files)
+        
     def _on_torrent_finished(self, torrent_id):
         """
         This is called when a torrent finishes and checks if any files to extract.
@@ -171,18 +190,31 @@ class Core(CorePluginBase):
                     log.error("EXTRACTOR: Error creating destination folder: %s", e)
                     return
 
-            def on_extract_success(result, torrent_id, fpath):
+            def on_chmod_success(result, torrent_id, fpath):
+                # XXX: Emit an event
+                log.info("EXTRACTOR: Chmod successful: %s (%s)", fpath, torrent_id)
+
+            def on_chmod_failed(result, torrent_id, fpath, dest):
+                # XXX: Emit an event
+                log.error("EXTRACTOR: Chmod failed: %s (%s) [%s]", fpath, torrent_id, dest)
+
+            def on_extract_success(result, torrent_id, fpath, dest):
                 # XXX: Emit an event
                 log.info("EXTRACTOR: Extract successful: %s (%s)", fpath, torrent_id)
+
+                d = getProcessValue("chmod", ["a+r", str(fpath)], {}, str(dest))
+                d.addCallback(on_chmod_success, torrent_id, fpath)
+                d.addErrback(on_chmod_failed, torrent_id, fpath)
 
             def on_extract_failed(result, torrent_id, fpath):
                 # XXX: Emit an event
                 log.error("EXTRACTOR: Extract failed: %s (%s)", fpath, torrent_id)
 
             # Run the command and add some callbacks
-            log.debug("EXTRACTOR: Extracting %s with %s %s to %s", fpath, cmd[0], cmd[1], dest)
+            # log.debug("EXTRACTOR: Extracting %s with %s %s to %s", fpath, cmd[0], cmd[1], dest)
+            log.info("EXTRACTOR: Extracting %s with %s %s to %s", fpath, cmd[0], cmd[1], dest)
             d = getProcessValue(cmd[0], cmd[1].split() + [str(fpath)], {}, str(dest))
-            d.addCallback(on_extract_success, torrent_id, fpath)
+            d.addCallback(on_extract_success, torrent_id, fpath, dest)
             d.addErrback(on_extract_failed, torrent_id, fpath)
 
     @export

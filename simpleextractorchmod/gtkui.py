@@ -50,21 +50,21 @@ from common import get_resource
 
 class GtkUI(GtkPluginBase):
     def enable(self):
-        self.glade = gtk.glade.XML(get_resource("simpleextractor_prefs.glade"))
+        self.glade = gtk.glade.XML(get_resource("simpleextractorchmod_prefs.glade"))
 
-        component.get("Preferences").add_page(_("SimpleExtractor"), self.glade.get_widget("extractor_prefs_box"))
+        component.get("Preferences").add_page(_("SimpleExtractorChmod"), self.glade.get_widget("simpleextractorchmod_prefs_box"))
         component.get("PluginManager").register_hook("on_apply_prefs", self.on_apply_prefs)
         component.get("PluginManager").register_hook("on_show_prefs", self.on_show_prefs)
         self.on_show_prefs()
 
     def disable(self):
-        component.get("Preferences").remove_page(_("Extractor"))
+        component.get("Preferences").remove_page(_("SimpleExtractorChmod"))
         component.get("PluginManager").deregister_hook("on_apply_prefs", self.on_apply_prefs)
         component.get("PluginManager").deregister_hook("on_show_prefs", self.on_show_prefs)
         del self.glade
 
     def on_apply_prefs(self):
-        log.debug("applying prefs for Extractor")
+        log.debug("applying prefs for SimpleExtractorChmod")
         if client.is_localhost():
             path = self.glade.get_widget("folderchooser_path").get_filename()
         else:

@@ -1,5 +1,5 @@
 /*!
- * simpleextractor.js
+ * simpleextractorchmod.js
  *
  * Copyright (c) Damien Churchill 2010 <damoxc@gmail.com>
  * Copyright (C) 2015 Chris Yereaztian <chris.yereaztian@gmail.com>
@@ -13,17 +13,17 @@
 Ext.ns('Deluge.ux.preferences');
 
 /**
- * @class Deluge.ux.preferences.SimpleExtractorPage
+ * @class Deluge.ux.preferences.SimpleExtractorChmodPage
  * @extends Ext.Panel
  */
-Deluge.ux.preferences.SimpleExtractorPage = Ext.extend(Ext.Panel, {
+Deluge.ux.preferences.SimpleExtractorChmodPage = Ext.extend(Ext.Panel, {
 
-    title: _('SimpleExtractor'),
+    title: _('SimpleExtractorChmod'),
     layout: 'fit',
     border: false,
 
     initComponent: function() {
-        Deluge.ux.preferences.SimpleExtractorPage.superclass.initComponent.call(this);
+        Deluge.ux.preferences.SimpleExtractorChmodPage.superclass.initComponent.call(this);
 
         this.form = this.add({
             xtype: 'form',
@@ -97,16 +97,16 @@ Deluge.ux.preferences.SimpleExtractorPage = Ext.extend(Ext.Panel, {
 });
 
 
-Deluge.plugins.SimpleExtractorPlugin = Ext.extend(Deluge.Plugin, {
+Deluge.plugins.SimpleExtractorChmodPlugin = Ext.extend(Deluge.Plugin, {
 
-    name: 'SimpleExtractor',
+    name: 'SimpleExtractorChmod',
 
     onDisable: function() {
         deluge.preferences.removePage(this.prefsPage);
     },
 
     onEnable: function() {
-        this.prefsPage = deluge.preferences.addPage(new Deluge.ux.preferences.SimpleExtractorPage());
+        this.prefsPage = deluge.preferences.addPage(new Deluge.ux.preferences.SimpleExtractorChmodPage());
     }
 });
-Deluge.registerPlugin('SimpleExtractor', Deluge.plugins.SimpleExtractorPlugin);
+Deluge.registerPlugin('SimpleExtractorChmod', Deluge.plugins.SimpleExtractorChmodPlugin);

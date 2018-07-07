@@ -51,5 +51,5 @@ class WebUI(WebPluginBase):
     def disable(self):
         pass
 
-    scripts = [get_resource("simpleextractor.js")]
+    scripts = [get_resource("simpleextractorchmod.js")]
     debug_scripts = scripts
