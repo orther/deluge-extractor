@@ -137,10 +137,12 @@ class Core(CorePluginBase):
         """
         This is called when a torrent state changes. 
         """
-        torrent = component.get("TorrentManager").torrents[torrent_id]
-        log.info("ExtactMod: State Changed::torrent_id: %s", torrent_id)
-        log.info("ExtactMod: State Changed::torrent_state: %s", torrent_state)
-        log.info("ExtactMod: State Changed::torrent.forcing_recheck: %s", torrent.forcing_recheck)
+        pass
+        # torrent = component.get("TorrentManager").torrents[torrent_id]
+        # log.info("ExtactMod: State Changed::torrent_id: %s", torrent_id)
+        # log.info("ExtactMod: State Changed::torrent_state: %s", torrent_state)
+        # log.info("ExtactMod: State Changed::torrent.forcing_recheck: %s", torrent.forcing_recheck)
+
         # if torrent_state) not in ["Seeding", "Queued"]:
         #     # tid = component.get("TorrentManager").torrents[torrent_id]
         #     # torrent_status = tid.get_status(["save_path", "name"])
@@ -187,9 +189,6 @@ class Core(CorePluginBase):
                 name = torrent_status["name"]
                 save_path = torrent_status["save_path"]
                 dest = os.path.join(save_path,name)
-                
-                # extract into a subfolder "extract"
-                dest = os.path.join(dest, "extract")
 
             # Create the destination folder if it doesn't exist
             if not os.path.exists(dest):
