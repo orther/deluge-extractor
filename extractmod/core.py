@@ -112,15 +112,15 @@ else:
         if not which(cmd):
             for k,v in EXTRACT_COMMANDS.items():
                 if cmd in v[0]:
-                    log.warning("EXTRACTOR: %s not found, disabling support for %s", cmd, k)
+                    log.warning("ExtactMod: %s not found, disabling support for %s", cmd, k)
                     del EXTRACT_COMMANDS[k]
 
 if not EXTRACT_COMMANDS:
-    raise Exception("EXTRACTOR: No archive extracting programs found, plugin will be disabled")
+    raise Exception("ExtactMod: No archive extracting programs found, plugin will be disabled")
 
 class Core(CorePluginBase):
     def enable(self):
-        self.config = deluge.configmanager.ConfigManager("simpleextractorchmod.conf", DEFAULT_PREFS)
+        self.config = deluge.configmanager.ConfigManager("extractmod.conf", DEFAULT_PREFS)
         if not self.config["extract_path"]:
             self.config["extract_path"] = deluge.configmanager.ConfigManager("core.conf")["download_location"]
         component.get("EventManager").register_event_handler("TorrentFinishedEvent", self._on_torrent_finished)
@@ -137,82 +137,92 @@ class Core(CorePluginBase):
         """
         This is called when a torrent state changes. 
         """
-        log.info("EXTRACTOR: State Changed::torrent_id: %s", torrent_id)
-        log.info("EXTRACTOR: State Changed::torrent_state: %s", torrent_state)
+        torrent = component.get("TorrentManager").torrents[torrent_id]
+        log.info("ExtactMod: State Changed::torrent_id: %s", torrent_id)
+        log.info("ExtactMod: State Changed::torrent_state: %s", torrent_state)
+        log.info("ExtactMod: State Changed::torrent.forcing_recheck: %s", torrent.forcing_recheck)
         # if torrent_state) not in ["Seeding", "Queued"]:
         #     # tid = component.get("TorrentManager").torrents[torrent_id]
-        #     # tid_status = tid.get_status(["save_path", "name"])
+        #     # torrent_status = tid.get_status(["save_path", "name"])
 
         #     # files = tid.get_files()
-        #     log.info("EXTRACTOR: State Changed::torrent_id: %s", torrent_id)
-        #     log.info("EXTRACTOR: State Changed::torrent_state: %s", torrent_state)
-        #     # log.info("EXTRACTOR: State Changed::tid_status: %s", tid_status)
-        #     # log.info("EXTRACTOR: State Changed::files: %s", files)
+        #     log.info("ExtactMod: State Changed::torrent_id: %s", torrent_id)
+        #     log.info("ExtactMod: State Changed::torrent_state: %s", torrent_state)
+        #     # log.info("ExtactMod: State Changed::torrent_status: %s", torrent_status)
+        #     # log.info("ExtactMod: State Changed::files: %s", files)
         
     def _on_torrent_finished(self, torrent_id):
         """
         This is called when a torrent finishes and checks if any files to extract.
         """
-        tid = component.get("TorrentManager").torrents[torrent_id]
-        tid_status = tid.get_status(["save_path", "name"])
+        self.extract_and_chmod(torrent_id)
 
-        files = tid.get_files()
+    @export
+    def extract_and_chmod(self, torrent_id):
+        torrent = component.get("TorrentManager").torrents[torrent_id]
+        torrent_status = torrent.get_status(["save_path", "name"])
+
+        files = torrent.get_files()
         for f in files:
             file_root, file_ext = os.path.splitext(f["path"])
             file_ext_sec = os.path.splitext(file_root)[1]
             if file_ext_sec and file_ext_sec + file_ext in EXTRACT_COMMANDS:
                 file_ext = file_ext_sec + file_ext
             elif file_ext not in EXTRACT_COMMANDS or file_ext_sec == '.tar':
-                log.warning("EXTRACTOR: Can't extract file with unknown file type: %s" % f["path"])
+                log.warning("ExtactMod: Can't extract file with unknown file type: %s" % f["path"])
                 continue
             cmd = EXTRACT_COMMANDS[file_ext]
 
             # Now that we have the cmd, lets run it to extract the files
-            fpath = os.path.join(tid_status["save_path"], os.path.normpath(f["path"]))
+            fpath = os.path.join(torrent_status["save_path"], os.path.normpath(f["path"]))
 
             # Get the destination path
             dest = os.path.normpath(self.config["extract_path"])
             if self.config["use_name_folder"]:
-                name = tid_status["name"]
+                name = torrent_status["name"]
                 dest = os.path.join(dest, name)
 
             # Override destination if in_place_extraction is set
             if self.config["in_place_extraction"]:
-                name = tid_status["name"]
-                save_path = tid_status["save_path"]
+                name = torrent_status["name"]
+                save_path = torrent_status["save_path"]
                 dest = os.path.join(save_path,name)
+                
+                # extract into a subfolder "extract"
+                dest = os.path.join(dest, "extract")
 
             # Create the destination folder if it doesn't exist
             if not os.path.exists(dest):
                 try:
                     os.makedirs(dest)
                 except Exception, e:
-                    log.error("EXTRACTOR: Error creating destination folder: %s", e)
+                    log.error("ExtactMod: Error creating destination folder: %s", e)
                     return
 
             def on_chmod_success(result, torrent_id, fpath):
                 # XXX: Emit an event
-                log.info("EXTRACTOR: Chmod successful: %s (%s)", fpath, torrent_id)
+                log.info("ExtactMod: Chmod successful: %s (%s)", fpath, torrent_id)
 
             def on_chmod_failed(result, torrent_id, fpath, dest):
                 # XXX: Emit an event
-                log.error("EXTRACTOR: Chmod failed: %s (%s) [%s]", fpath, torrent_id, dest)
+                log.error("ExtactMod: Chmod failed: %s (%s) [%s]", fpath, torrent_id, dest)
 
             def on_extract_success(result, torrent_id, fpath, dest):
                 # XXX: Emit an event
-                log.info("EXTRACTOR: Extract successful: %s (%s)", fpath, torrent_id)
+                log.info("ExtactMod: Extract success: %s (%s)", fpath, torrent_id)
+                log.info("ExtactMod: Extract success:dest: %s", dest)
 
-                d = getProcessValue("chmod", ["a+r", str(fpath)], {}, str(dest))
+                d = getProcessValue("chmod", ["-R", "a+r", str(dest)], {}, str(dest))
                 d.addCallback(on_chmod_success, torrent_id, fpath)
                 d.addErrback(on_chmod_failed, torrent_id, fpath)
 
             def on_extract_failed(result, torrent_id, fpath):
                 # XXX: Emit an event
-                log.error("EXTRACTOR: Extract failed: %s (%s)", fpath, torrent_id)
+                log.error("ExtactMod: Extract failed: %s (%s)", fpath, torrent_id)
 
             # Run the command and add some callbacks
-            # log.debug("EXTRACTOR: Extracting %s with %s %s to %s", fpath, cmd[0], cmd[1], dest)
-            log.info("EXTRACTOR: Extracting %s with %s %s to %s", fpath, cmd[0], cmd[1], dest)
+            # log.debug("ExtactMod: Extracting %s with %s %s to %s", fpath, cmd[0], cmd[1], dest)
+            log.info("ExtactMod: Extracting %s with %s %s to %s", fpath, cmd[0], cmd[1], dest)
             d = getProcessValue(cmd[0], cmd[1].split() + [str(fpath)], {}, str(dest))
             d.addCallback(on_extract_success, torrent_id, fpath, dest)
             d.addErrback(on_extract_failed, torrent_id, fpath)

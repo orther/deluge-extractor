@@ -1,11 +1,8 @@
 #
-# webui.py
+# common.py
 #
 # Copyright (C) 2009 Andrew Resch <andrewresch@gmail.com>
-#
-# Basic plugin template created by:
-# Copyright (C) 2008 Martijn Voncken <mvoncken@gmail.com>
-# Copyright (C) 2007-2009 Andrew Resch <andrewresch@gmail.com>
+# Copyright (C) 2015 Chris Yereaztian <chris.yereaztian@gmail.com>
 #
 # Deluge is free software.
 #
@@ -37,19 +34,6 @@
 #
 #
 
-from deluge.log import LOG as log
-from deluge.ui.client import client
-from deluge import component
-from deluge.plugins.pluginbase import WebPluginBase
-
-from common import get_resource
-
-class WebUI(WebPluginBase):
-    def enable(self):
-        pass
-
-    def disable(self):
-        pass
-
-    scripts = [get_resource("simpleextractorchmod.js")]
-    debug_scripts = scripts
+def get_resource(filename):
+    import pkg_resources, os
+    return pkg_resources.resource_filename("extractmod", os.path.join("data", filename))

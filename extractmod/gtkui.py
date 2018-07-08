@@ -50,21 +50,37 @@ from common import get_resource
 
 class GtkUI(GtkPluginBase):
     def enable(self):
-        self.glade = gtk.glade.XML(get_resource("simpleextractorchmod_prefs.glade"))
+        self.glade = gtk.glade.XML(get_resource("extractmod_prefs.glade"))
 
-        component.get("Preferences").add_page(_("SimpleExtractorChmod"), self.glade.get_widget("simpleextractorchmod_prefs_box"))
+        # Preferences
+        component.get("Preferences").add_page(_("ExtractMod"), self.glade.get_widget("extractmod_prefs_box"))
         component.get("PluginManager").register_hook("on_apply_prefs", self.on_apply_prefs)
         component.get("PluginManager").register_hook("on_show_prefs", self.on_show_prefs)
-        self.on_show_prefs()
+        # self.on_show_prefs()
+
+        # Submenu
+        log.debug("add items to torrentview-popup menu.")
+        torrentmenu = component.get("MenuBar").torrentmenu
+        self.extractmod_menu = ExtractModMenu()
+        torrentmenu.append(self.extractmod_menu)
+        self.extractmod_menu.show_all()
 
     def disable(self):
-        component.get("Preferences").remove_page(_("SimpleExtractorChmod"))
+        # Preferences
+        component.get("Preferences").remove_page(_("ExtractMod"))
         component.get("PluginManager").deregister_hook("on_apply_prefs", self.on_apply_prefs)
         component.get("PluginManager").deregister_hook("on_show_prefs", self.on_show_prefs)
-        del self.glade
+        # del self.glade
+
+        try:
+            # Submenu
+            torrentmenu = component.get("MenuBar").torrentmenu
+            torrentmenu.remove(self.extractmod_menu)
+        except Exception, e:
+            log.debug(e)
 
     def on_apply_prefs(self):
-        log.debug("applying prefs for SimpleExtractorChmod")
+        log.debug("applying prefs for ExtractMod")
         if client.is_localhost():
             path = self.glade.get_widget("folderchooser_path").get_filename()
         else:
@@ -96,3 +112,75 @@ class GtkUI(GtkPluginBase):
             self.glade.get_widget("chk_in_place_extraction").set_active(config["in_place_extraction"])
 
         client.extractor.get_config().addCallback(on_get_config)
+
+
+class ExtractModMenu(gtk.MenuItem):
+    def __init__(self):
+        gtk.MenuItem.__init__(self, "ExtactMod")
+
+        self.sub_menu = gtk.Menu()
+        self.set_submenu(self.sub_menu)
+        self.items = []
+
+        #attach..
+        torrentmenu = component.get("MenuBar").torrentmenu
+        self.sub_menu.connect("show", self.on_show, None)
+
+    def get_torrent_ids(self):
+        return component.get("TorrentView").get_selected_torrents()
+
+
+    def on_show(self, widget=None, data=None):
+        try:
+            for child in self.sub_menu.get_children():
+                self.sub_menu.remove(child)
+                
+            extract_item = gtk.MenuItem('Exract')
+            extract_item.connect("activate", self.on_select_extract)
+            self.sub_menu.append(extract_item)
+
+            self.show_all()
+        except Exception, e:
+            log.exception('AHH!')
+
+    def on_select_extract(self, widget=None):
+        log.debug("select extract: %s" % self.get_torrent_ids())
+        for torrent_id in self.get_torrent_ids():
+            client.extractmod.extract_and_chmod(torrent_id)
+
+    # def on_show(self, widget=None, data=None):
+    #     try:
+    #         for child in self.sub_menu.get_children():
+    #             self.sub_menu.remove(child)
+    #         # TODO: Make thise times customizable, and/or add a custom popup
+    #         for time in (None, 1, 2, 3, 7, 14, 30):
+    #             if time is None:
+    #                 item = gtk.MenuItem('Never')
+    #             else:
+    #                 item = gtk.MenuItem(str(time) + ' days')
+    #             item.connect("activate", self.on_select_time, time)
+    #             self.sub_menu.append(item)
+    #         item = gtk.MenuItem('Custom')
+    #         item.connect('activate', self.on_custom_time)
+    #         self.sub_menu.append(item)
+    #         self.show_all()
+    #     except Exception, e:
+    #         log.exception('AHH!')
+
+    # def on_select_time(self, widget=None, time=None):
+    #     log.debug("select seed stop time:%s,%s" % (time ,self.get_torrent_ids()) )
+    #     for torrent_id in self.get_torrent_ids():
+    #         client.seedtime.set_torrent(torrent_id, time)
+
+    # def on_custom_time(self, widget=None):
+    #     # Show the custom time dialog
+    #     glade = gtk.glade.XML(get_resource("config.glade"))
+    #     dlg = glade.get_widget('dlg_custom_time')
+    #     result = dlg.run()
+    #     if result == gtk.RESPONSE_OK:
+    #         time = glade.get_widget('txt_custom_stop_time').get_text()
+    #         try:
+    #             self.on_select_time(time=float(time))
+    #         except ValueError:
+    #             log.error('Invalid custom stop time entered.')
+    #     dlg.destroy()

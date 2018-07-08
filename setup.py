@@ -40,11 +40,11 @@
 
 from setuptools import setup
 
-__plugin_name__ = "SimpleExtractorChmod"
-__author__ = "Chris Yereaztian"
-__author_email__ = "chris.yereaztian@gmail.com"
-__version__ = "0.4.2a2"
-__url__ = "github.com/cvarta/deluge-extractor"
+__plugin_name__ = "ExtractMod"
+__author__ = "Brandon Orther"
+__author_email__ = "brandon.orther@gmail.com"
+__version__ = "0.4.2a3"
+__url__ = "github.com/orther/deluge-extractor"
 __license__ = "GPLv3"
 __description__ = "Extract files upon torrent completion and chmod a+r"
 __long_description__ = """
